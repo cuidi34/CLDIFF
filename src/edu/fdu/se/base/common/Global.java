@@ -25,7 +25,20 @@ public class Global {
 
     public static List<String> outputFilePathList;
 
-    public static String globalPath;
 
     public static Map<Integer,String> changeEntityFileNameMap;
+    /**
+     * running mode
+     * 0 command mode
+     * 1 offline mode
+     * 2 online mode
+     */
+    public static int runningMode;
+    /**
+     * input configs
+     */
+    public static String outputDir;
+    public static String repoPath; // null in online mode
+    public static String projectName;
+
 }

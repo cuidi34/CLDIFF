@@ -34,32 +34,37 @@ public class CLDiffAPI {
         Global.outputFilePathList = new ArrayList<>();
         filePairDatas = new ArrayList<>();
         clDiffCore = new CLDiffCore();
-
         clDiffCore.mFileOutputLog = new FileOutputLog(outputDir, meta.getProject_name());
         clDiffCore.mFileOutputLog.setCommitId(meta.getCommit_hash(), meta.getParents());
-
         initDataFromJson(meta);
     }
 
 
     public void initDataFromJson(Meta meta) {
         List<CommitFile> commitFiles = meta.getFiles();
-        for (CommitFile file : commitFiles) {
+        List<String> actions = meta.getActions();
+        for (int i = 0; i < commitFiles.size(); i++) {
+            CommitFile file = commitFiles.get(i);
+            if (file.getDiffPath() == null) {
+                continue;
+            }
+            String action = actions.get(i);
             String fileFullName = file.getFile_name();
             int index = fileFullName.lastIndexOf("/");
             String fileName = fileFullName.substring(index + 1, fileFullName.length());
             String prevFilePath = file.getPrev_file_path();
-            if (CLDiffCore.isFilter(prevFilePath)) {
-                continue;
-            }
             String currFilePath = file.getCurr_file_path();
             String parentCommit = file.getParent_commit();
             String basePath = clDiffCore.mFileOutputLog.metaLinkPath;
             byte[] prevBytes = null;
             byte[] currBytes = null;
             try {
-                prevBytes = Files.readAllBytes(Paths.get(basePath + "/" + prevFilePath));
-                currBytes = Files.readAllBytes(Paths.get(basePath + "/" + currFilePath));
+                if (prevFilePath != null) {
+                    prevBytes = Files.readAllBytes(Paths.get(basePath + "/" + prevFilePath));
+                }
+                if (currFilePath != null) {
+                    currBytes = Files.readAllBytes(Paths.get(basePath + "/" + currFilePath));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -81,15 +86,12 @@ public class CLDiffAPI {
                 continue;
             }
             if (fp.getPrev() == null) {
-                //todo test
                 this.clDiffCore.dooAddFile(fp.getFileName(), fp.getCurr(), absolutePath);
-            } else if(fp.getCurr() == null){
-                //todo test
+            } else if (fp.getCurr() == null) {
                 this.clDiffCore.dooRemoveFile(fp.getFileName(), fp.getPrev(), absolutePath);
-            } else{
-                this.clDiffCore.doo(fp.getFileName(), fp.getPrev(), fp.getCurr(), absolutePath);
+            } else {
+                this.clDiffCore.dooDiffFile(fp.getFileName(), fp.getPrev(), fp.getCurr(), absolutePath);
             }
-
             this.fileChangeEntityData.put(fp.getParentCommit() + "@@@" + this.clDiffCore.changeEntityData.fileName, this.clDiffCore.changeEntityData);
         }
         List<String> fileNames = new ArrayList<>(this.fileChangeEntityData.keySet());
@@ -112,7 +114,7 @@ public class CLDiffAPI {
                 totalFileLinks.addFile2FileAssos(fileNameA, fileNameB, fileOuterLinksGenerator.mAssos);
             }
         }
-        new FileOuterLinksGenerator().checkSimilarity(this.fileChangeEntityData);
+        new FileOuterLinksGenerator().checkSimilarity(this.fileChangeEntityData,totalFileLinks);
         clDiffCore.mFileOutputLog.writeLinkJson(totalFileLinks.toAssoJSonString());
         System.out.println(totalFileLinks.toConsoleString());
         fileChangeEntityData.clear();

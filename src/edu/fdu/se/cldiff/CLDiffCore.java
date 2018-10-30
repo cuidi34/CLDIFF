@@ -17,6 +17,7 @@ import edu.fdu.se.base.preprocessingfile.data.PreprocessedData;
 import edu.fdu.se.base.webapi.GenerateChangeEntityJson;
 import edu.fdu.se.config.ProjectProperties;
 import edu.fdu.se.config.PropertyKeys;
+import org.json.JSONArray;
 
 /**
  * Created by huangkaifeng on 2018/2/27.
@@ -27,7 +28,7 @@ public class CLDiffCore {
     public ChangeEntityData changeEntityData;
     public FileOutputLog mFileOutputLog;
 
-    public void doo(String filePrev, String fileCurr, String output) {
+    public void dooDiffFile(String filePrev, String fileCurr, String output) {
         int index = filePrev.lastIndexOf('/');
         String fileName = filePrev.substring(index+1,filePrev.length());
         Global.fileName = fileName;
@@ -40,6 +41,11 @@ public class CLDiffCore {
         runDiff(preDiff,fileName);
     }
 
+    /**
+     * filter out non-java files or test files
+     * @param filePathName
+     * @return true: non-java files or test files, false:java files
+     */
     public static boolean isFilter(String filePathName){
         String name = filePathName.toLowerCase();
         if(!name.endsWith(".java")){
@@ -57,7 +63,7 @@ public class CLDiffCore {
     }
 
 
-    public void doo(String fileName,byte[] filePrevContent, byte[] fileCurrContent, String output) {
+    public void dooDiffFile(String fileName, byte[] filePrevContent, byte[] fileCurrContent, String output) {
         long start = System.nanoTime();
         // 1.pre
         FilePairPreDiff preDiff = new FilePairPreDiff();
@@ -96,7 +102,6 @@ public class CLDiffCore {
         //print
         long end = System.nanoTime();
         System.out.println("----mapping " +(end-start));
-
         printActions(actionsData,treeGenerator);
         long start2 = System.nanoTime();
         MiningActionData mad = new MiningActionData(preData,actionsData,treeGenerator);
@@ -112,10 +117,13 @@ public class CLDiffCore {
         System.out.println("----grouping " +(end2-start2));
 // json
         GenerateChangeEntityJson.setStageIIIBean(ced);
-        String json = GenerateChangeEntityJson.generateEntityJson(ced.mad);
-        this.mFileOutputLog.writeEntityJson(json);
-        System.out.println(json);
-
+        JSONArray json = GenerateChangeEntityJson.generateEntityJson(ced.mad);
+        this.mFileOutputLog.writeEntityJson(json.toString(4));
+        if(Global.runningMode==0){
+            System.out.println(GenerateChangeEntityJson.toConsoleString(json));
+        }else {
+            System.out.println(json.toString(4));
+        }
 
     }
 
